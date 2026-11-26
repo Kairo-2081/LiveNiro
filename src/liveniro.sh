@@ -99,6 +99,8 @@ if [ -n "$LN_ACTIONS" ]; then
   play_actions "$win" "$WX" "$WY" "$LN_ACTIONS" || warn "The input script stopped early."
 fi
 wait_recording
+# What was on screen at the end: useful to check that a scripted flow (login, menu) got where it should.
+info "Windows open at the end: $(list_windows | cut -f2 | sed 's/^$/(untitled)/' | paste -sd ',' | sed 's/,/, /g')"
 
 # 5. Encode the outputs
 group "Encode"
