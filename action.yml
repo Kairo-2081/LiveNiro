@@ -118,6 +118,7 @@ runs:
       with:
         name: liveniro-${{ inputs.name }}
         path: ${{ inputs.output-dir }}
+        include-hidden-files: true   # the default output folder, .liveniro, is hidden
         if-no-files-found: warn
 
     - name: Commit demo
