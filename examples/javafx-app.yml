@@ -1,0 +1,28 @@
+# JavaFX app (Gradle or Maven). LiveNiro picks the Java version from your build file.
+name: LiveNiro demo
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: [".liveniro/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kairo-2081/LiveNiro@v0
+        with:
+          window: "Login"   # record the window whose title contains this
+          duration: "10"
+          actions: |
+            wait 1
+            click 300 200
+            type demo-user
+            key Tab
+            type demo-pass
+            key Return
