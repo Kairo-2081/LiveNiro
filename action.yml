@@ -1,0 +1,140 @@
+name: LiveNiro
+description: Build your desktop project, run it on a virtual screen, and put a live GIF of it in your README.
+author: Kairo-2081
+branding:
+  icon: play-circle
+  color: purple
+
+inputs:
+  path:
+    description: Folder of the project to run, relative to the repo root.
+    default: "."
+  stack:
+    description: "auto, igraphics, javafx, pygame or custom."
+    default: auto
+  setup:
+    description: Extra shell commands to run before the build (install packages, fetch assets).
+    default: ""
+  build:
+    description: Override the detected build command.
+    default: ""
+  run:
+    description: Override the detected run command. Required when stack is custom.
+    default: ""
+  window:
+    description: Regex for the window title to record. Default is the largest window that appears.
+    default: ""
+  wait-timeout:
+    description: Seconds to wait for the app's window to appear.
+    default: "300"
+  warmup:
+    description: Seconds to wait after the window appears before recording starts.
+    default: "2"
+  duration:
+    description: Length of the recording in seconds.
+    default: "12"
+  actions:
+    description: |
+      Input script played while recording, one command per line.
+      Coordinates are relative to the app window. Commands:
+      wait <sec> | click <x> <y> | move <x> <y> | key <name> | hold <key> <sec> | type <text>
+    default: ""
+  screen:
+    description: Virtual screen size, WIDTHxHEIGHT.
+    default: "1600x900"
+  fps:
+    description: Frames per second of the recording.
+    default: "15"
+  gif-width:
+    description: Width of the GIF in pixels (height keeps the aspect ratio).
+    default: "800"
+  output-dir:
+    description: Where the GIF, MP4 and poster image are written, relative to the repo root.
+    default: ".liveniro"
+  name:
+    description: Base file name for the outputs.
+    default: "demo"
+  readme:
+    description: README to update, relative to the repo root. Set to "" to leave it alone.
+    default: "README.md"
+  commit:
+    description: Commit the outputs back to the branch (only on push events).
+    default: "true"
+  commit-message:
+    description: Message for the commit.
+    default: "docs: update LiveNiro demo [skip ci]"
+  upload-artifact:
+    description: Also upload the outputs as a workflow artifact.
+    default: "true"
+
+outputs:
+  stack:
+    description: The stack that was detected or used.
+    value: ${{ steps.run.outputs.stack }}
+  gif:
+    description: Path to the GIF.
+    value: ${{ steps.run.outputs.gif }}
+  mp4:
+    description: Path to the MP4.
+    value: ${{ steps.run.outputs.mp4 }}
+  poster:
+    description: Path to the poster PNG.
+    value: ${{ steps.run.outputs.poster }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install LiveNiro tools
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb ffmpeg xdotool x11-utils >/dev/null
+
+    - name: Build, run and record
+      id: run
+      shell: bash
+      env:
+        LN_PATH: ${{ inputs.path }}
+        LN_STACK: ${{ inputs.stack }}
+        LN_SETUP: ${{ inputs.setup }}
+        LN_BUILD: ${{ inputs.build }}
+        LN_RUN: ${{ inputs.run }}
+        LN_WINDOW: ${{ inputs.window }}
+        LN_WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+        LN_WARMUP: ${{ inputs.warmup }}
+        LN_DURATION: ${{ inputs.duration }}
+        LN_ACTIONS: ${{ inputs.actions }}
+        LN_SCREEN: ${{ inputs.screen }}
+        LN_FPS: ${{ inputs.fps }}
+        LN_GIF_WIDTH: ${{ inputs.gif-width }}
+        LN_OUTPUT_DIR: ${{ inputs.output-dir }}
+        LN_NAME: ${{ inputs.name }}
+        LN_README: ${{ inputs.readme }}
+      run: bash "$GITHUB_ACTION_PATH/src/liveniro.sh"
+
+    - name: Upload demo artifact
+      if: inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: liveniro-${{ inputs.name }}
+        path: ${{ inputs.output-dir }}
+        if-no-files-found: warn
+
+    - name: Commit demo
+      if: inputs.commit == 'true' && github.event_name == 'push'
+      shell: bash
+      env:
+        LN_OUTPUT_DIR: ${{ inputs.output-dir }}
+        LN_README: ${{ inputs.readme }}
+        LN_MESSAGE: ${{ inputs.commit-message }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add "$LN_OUTPUT_DIR"
+        if [ -n "$LN_README" ] && [ -f "$LN_README" ]; then git add "$LN_README"; fi
+        if git diff --cached --quiet; then
+          echo "Demo unchanged, nothing to commit."
+        else
+          git commit -m "$LN_MESSAGE"
+          git push
+        fi
