@@ -21,7 +21,10 @@ jobs:
           duration: "10"
           actions: |
             wait 1
-            click 300 200
+            click 300 200         # opens the login dialog
+            wait 1.5
+            focus Sign in         # dialogs need focus before typing
+            click 220 170
             type demo-user
             key Tab
             type demo-pass

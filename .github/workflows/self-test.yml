@@ -65,7 +65,19 @@ jobs:
         with:
           path: projects/library-manager
           name: library-manager
-          window: Bookverse
-          duration: "8"
+          window: Bookverse - Login
+          duration: "14"
+          actions: |
+            wait 1.5
+            click 519 409            # "Log In"
+            wait 1.5
+            focus Bookverse Login    # the login dialog
+            click 468 227            # email field
+            type s
+            click 468 303            # password field
+            type s
+            wait 0.5
+            click 408 356            # LOG IN
+            wait 4
           readme: ""
           commit: "false"

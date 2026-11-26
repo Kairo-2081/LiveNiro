@@ -91,8 +91,21 @@ while it records. Coordinates are pixels from the top-left of your window.
 | `key <name>` | press a key: `space`, `Return`, `Up`, `Left`, `Tab`, `ctrl+s`, `a` … (X11 key names, as used by xdotool) |
 | `hold <key> <sec>` | hold a key down |
 | `type <text>` | type text |
+| `focus <title>` | send the next keys to another window, such as a login dialog (title is a regex) |
 
 The mouse pointer only appears in the recording when the script uses it.
+
+Dialogs and popups are separate windows, and nothing gives them keyboard focus
+on a bare virtual screen. Use `focus` before typing into one:
+
+```yaml
+          actions: |
+            click 519 409            # "Log In" opens a dialog
+            wait 1.5
+            focus Bookverse Login    # the dialog's title
+            click 468 227
+            type demo@example.com
+```
 
 ## Options
 
