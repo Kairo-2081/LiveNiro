@@ -20,14 +20,29 @@ py_entry() {
 
 stack_setup() {
   apt_install python3 python3-venv python3-pip
-  python3 -m venv "$PY_VENV"
-  "$PY_VENV/bin/python" -m pip install -q --upgrade pip
+  # Prefer the distro's Python: runner images put a very new Python first on PATH,
+  # and pygame often has no prebuilt wheel for it yet (pip then tries to compile SDL bindings).
+  local py=python3
+  if [ -x /usr/bin/python3 ]; then py=/usr/bin/python3; fi
+  "$py" -m venv "$PY_VENV"
+  info "Python: $("$PY_VENV/bin/python" --version 2>&1)"
+  local pip=("$PY_VENV/bin/python" -m pip install -q)
+  "${pip[@]}" --upgrade pip
+
   if [ -f requirements.txt ]; then
-    "$PY_VENV/bin/python" -m pip install -q -r requirements.txt
+    if ! "${pip[@]}" -r requirements.txt; then
+      warn "Installing requirements.txt failed; retrying with pygame-ce in place of pygame."
+      grep -viE '^\s*pygame\s*([<>=!~;\[]|$)' requirements.txt >"$LN_TMP/requirements.txt" || true
+      "${pip[@]}" -r "$LN_TMP/requirements.txt"
+    fi
   elif [ -f pyproject.toml ] || [ -f setup.py ]; then
-    "$PY_VENV/bin/python" -m pip install -q .
+    "${pip[@]}" . || warn "Could not install the project package; continuing with pygame only."
   fi
-  "$PY_VENV/bin/python" -c 'import pygame' 2>/dev/null || "$PY_VENV/bin/python" -m pip install -q pygame
+
+  if ! "$PY_VENV/bin/python" -c 'import pygame' 2>/dev/null; then
+    # pygame-ce installs the same 'pygame' module and ships wheels for newer Pythons.
+    "${pip[@]}" --only-binary=:all: pygame || "${pip[@]}" pygame-ce
+  fi
 }
 
 stack_build() {
