@@ -21,7 +21,7 @@ REPO_ROOT="$(pwd)"
 : "${LN_GIF_WIDTH:=800}"
 : "${LN_OUTPUT_DIR:=.liveniro}"
 : "${LN_NAME:=demo}"
-: "${LN_README:=README.md}"
+LN_README="${LN_README-README.md}"   # empty means: leave the README alone
 
 LN_TMP="${RUNNER_TEMP:-/tmp}/liveniro"
 mkdir -p "$LN_TMP"
