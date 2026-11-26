@@ -1,0 +1,71 @@
+name: Self-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pygame:
+    name: pygame fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          path: test/fixtures/pygame-bouncer
+          name: pygame-bouncer
+          duration: "6"
+          actions: |
+            wait 0.5
+            hold Left 1.5
+            hold Right 2.5
+          readme: ""
+          commit: "false"
+
+  igraphics:
+    name: iGraphics (Bounce Classic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Kairo-2081/Bounce-Classic
+          path: projects/bounce-classic
+      - uses: ./
+        with:
+          path: projects/bounce-classic
+          name: bounce-classic
+          duration: "14"
+          actions: |
+            wait 1.5
+            key Home
+            wait 0.5
+            click 1000 80
+            wait 1.5
+            hold Right 2.5
+            key Up
+            hold Right 2
+            key Up
+            hold Right 3
+          readme: ""
+          commit: "false"
+
+  javafx:
+    name: JavaFX (LibraryManager)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Kairo-2081/LibraryManager
+          path: projects/library-manager
+      - uses: ./
+        with:
+          path: projects/library-manager
+          name: library-manager
+          window: Bookverse
+          duration: "8"
+          readme: ""
+          commit: "false"
