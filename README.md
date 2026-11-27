@@ -233,7 +233,7 @@ afterwards, so Gradle daemons and child processes never outlive the run.
 | **JavaFX** | `openjfx` / `javafx` in `build.gradle(.kts)` or `pom.xml` | `./gradlew classes` or `mvn compile`, with the Java version read from your build file | `./gradlew run` or `mvn javafx:run` |
 | **java**<br/><sub>Swing / AWT</sub> | `.java` files that use `javax.swing` or `java.awt` | A Gradle `application`, `mvn compile`, or plain `javac` when there's no build tool | `./gradlew run`, `mvn exec:java`, or `java` on the class with `main()` (a Swing file and a class called `Main` win) |
 | **pygame** / **python**<br/><sub>pygame, tkinter, turtle, PyQt, PySide, pyglet, arcade, kivy, Dear PyGui</sub> | The library in `requirements.txt` / `pyproject.toml`, or an `import` of it | A fresh virtualenv on the distro Python; `requirements.txt` if there is one, plus anything the code imports that's missing; Tk and Qt system libraries when needed | `main.py`, `game.py`, `app.py` … or the script that opens a window or starts an event loop |
-| **cpp**<br/><sub>C / C++</sub> | `CMakeLists.txt`, a `.pro` file, a Makefile next to C/C++ sources, or sources that include SFML, SDL2, raylib, GLFW, GLUT or Qt | CMake, qmake or `make`; with no build system, `g++`/`gcc` on the sources with the detected libraries linked. Libraries come from Ubuntu, except raylib, which is built from source | The `add_executable()` target, or the newest executable the build produced; `make run` as a last resort |
+| **cpp**<br/><sub>C / C++</sub> | `CMakeLists.txt`, a `.pro` file, a Makefile next to C/C++ sources, or sources that include SFML, SDL2, raylib, GLFW, GLUT or Qt | CMake, qmake or `make`; with no build system, `g++`/`gcc` on the sources with the detected libraries linked. Libraries come from Ubuntu, except raylib, and SFML when the code needs the other major version (2 vs 3); those are built from source | The `add_executable()` target, or the newest executable the build produced; `make run` as a last resort |
 | **custom** | `stack: custom` | Your `setup` and `build` | Your `run` |
 
 Old iGraphics templates that include `<windows.h>` unconditionally can't build
@@ -529,7 +529,7 @@ Every input has an `LN_` environment variable: `LN_STACK`, `LN_RUN`,
 - **Linux only.** The project has to build and run on Ubuntu. Windows-only code
   gets a clear error, not a silent failure.
 - **Software rendering.** No GPU on runners, so heavy 3D scenes record slowly.
-- **raylib is built from source** because Ubuntu doesn't package it, which adds about a minute to each run.
+- **Some libraries are built from source**, adding about a minute: raylib always (Ubuntu doesn't package it), and SFML when your code targets a different major version than Ubuntu ships (current runners have SFML 3; most existing projects use SFML 2).
 - **No sound** in the recording.
 - **A recording, not the live app.** Visitors watch a GIF; they can't play it.
   A self-hostable "▶ Run live" launcher is on the roadmap.
