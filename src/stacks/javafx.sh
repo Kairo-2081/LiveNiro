@@ -57,8 +57,9 @@ fx_maven()  { if [ -f mvnw ]; then ./mvnw "$@"; else mvn "$@"; fi; }
 
 stack_build() {
   case "$FX_TOOL" in
-    gradle) fx_gradle --no-daemon -q classes ;;
-    maven)  fx_maven -q -B -DskipTests compile ;;
+    # Package servers (Maven Central, the Gradle plugin portal) rate-limit busy CI runners; retry those.
+    gradle) retry_network fx_gradle --no-daemon -q classes ;;
+    maven)  retry_network fx_maven -q -B -DskipTests compile ;;
   esac
 }
 

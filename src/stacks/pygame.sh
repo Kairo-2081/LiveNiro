@@ -26,7 +26,7 @@ stack_setup() {
   if [ -x /usr/bin/python3 ]; then py=/usr/bin/python3; fi
   "$py" -m venv "$PY_VENV"
   info "Python: $("$PY_VENV/bin/python" --version 2>&1)"
-  local pip=("$PY_VENV/bin/python" -m pip install -q)
+  local pip=(retry_network "$PY_VENV/bin/python" -m pip install -q)
   "${pip[@]}" --upgrade pip
 
   if [ -f requirements.txt ]; then

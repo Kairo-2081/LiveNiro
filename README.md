@@ -125,6 +125,7 @@ on a bare virtual screen. Use `focus` before typing into one:
 | `readme` | `README.md` | README to update; `""` to leave it alone |
 | `commit` | `true` | commit the demo back (push events only) |
 | `upload-artifact` | `true` | also attach the files to the workflow run |
+| `cache` | `true` | keep Gradle, Maven and pip downloads between runs |
 
 Outputs: `stack`, `gif`, `mp4`, `poster`.
 
@@ -162,6 +163,13 @@ Every input has an `LN_` environment variable (`LN_STACK`, `LN_RUN`, `LN_WINDOW`
 4. **Launch the app** and wait for its window to appear.
 5. **Record** just that window with ffmpeg while xdotool plays your input script.
 6. **Encode** a palette-optimized GIF, an MP4 and a poster frame, update the README and commit.
+
+## Speed and reliability
+
+Dependencies (Gradle, Maven, pip) are cached between runs, so after the first
+run a Java project skips almost all downloads. If a package server still
+answers "429 Too Many Requests" or times out, LiveNiro waits and retries the
+build up to two more times. Real build errors fail straight away.
 
 ## Limits, honestly
 

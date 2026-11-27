@@ -35,7 +35,7 @@ apt_install() {
   done
   [ ${#want[@]} -eq 0 ] && return 0
   info "Installing: ${want[*]}"
-  sudo_if_needed env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${want[@]}" >/dev/null
+  sudo_if_needed env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Acquire::Retries=3 "${want[@]}" >/dev/null
 }
 
 stop_app() {
@@ -58,4 +58,28 @@ find_files() {
   find "$dir" -maxdepth "$depth" \
     \( -name .git -o -name node_modules -o -name build -o -name target -o -name .gradle -o -name venv -o -name .venv -o -name __pycache__ \) -prune -o \
     -type f \( "${expr[@]}" \) -print 2>/dev/null
+}
+
+# retry_network <cmd...> : run a command; if it fails with what looks like a network or rate-limit
+# error (HTTP 429, 5xx from a package server, timeouts, resets), wait and try again.
+# Other failures (compile errors, missing files) fail at once: retrying them only wastes time.
+retry_network() {
+  local attempt=1 max=3 delay="${LN_RETRY_DELAY:-20}" log rc
+  log="$LN_TMP/retry.log"
+  while :; do
+    set +e
+    "$@" 2>&1 | tee "$log"
+    rc=${PIPESTATUS[0]}
+    set -e
+    [ "$rc" -eq 0 ] && return 0
+    if [ "$attempt" -ge "$max" ] || ! grep -qiE \
+      '429|too many requests|50[234] |bad gateway|service unavailable|gateway time-?out|timed? ?out|connection (reset|refused)|could not (get|head|resolve host)|temporary failure in name resolution|read error|unexpected end of file|ReadTimeoutError|ConnectionError' \
+      "$log"; then
+      return "$rc"
+    fi
+    warn "Network or rate-limit error (attempt $attempt of $max); retrying in ${delay}s."
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 3))
+  done
 }

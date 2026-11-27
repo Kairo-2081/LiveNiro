@@ -66,6 +66,9 @@ inputs:
   upload-artifact:
     description: Also upload the outputs as a workflow artifact.
     default: "true"
+  cache:
+    description: Keep Gradle, Maven and pip downloads between runs (faster, and gentler on package servers).
+    default: "true"
 
 outputs:
   stack:
@@ -87,8 +90,21 @@ runs:
     - name: Install LiveNiro tools
       shell: bash
       run: |
-        sudo apt-get update -qq
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb ffmpeg xdotool x11-utils >/dev/null
+        sudo apt-get update -qq -o Acquire::Retries=3
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Acquire::Retries=3 xvfb ffmpeg xdotool x11-utils >/dev/null
+
+    - name: Restore dependency cache
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ~/.m2/repository
+          ~/.cache/pip
+        key: liveniro-deps-${{ runner.os }}-${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle-wrapper.properties', '**/pom.xml', '**/requirements.txt', '**/pyproject.toml') }}
+        restore-keys: |
+          liveniro-deps-${{ runner.os }}-
 
     - name: Build, run and record
       id: run
