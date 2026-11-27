@@ -100,7 +100,7 @@ on a bare virtual screen. Use `focus` before typing into one:
 
 ```yaml
           actions: |
-            click 519 409            # "Log In" opens a dialog
+            click 537 403            # "Log In" opens a dialog
             wait 1.5
             focus Bookverse Login    # the dialog's title
             click 468 227
