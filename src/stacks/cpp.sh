@@ -7,6 +7,7 @@ CPP_BIN=""
 CPP_MAKE_RUN=0
 CPP_LIBS=()        # detected library names
 CPP_LDFLAGS=()     # link flags for plain-source builds
+CPP_CMAKE_ARGS=()  # extra -D options for CMake builds
 
 # cpp_scan <regex> : true if any source or build file mentions it.
 cpp_scan() {
@@ -45,13 +46,52 @@ cpp_detect_libs() {
 
 cpp_has() { local l; for l in "${CPP_LIBS[@]}"; do [ "$l" = "$1" ] && return 0; done; return 1; }
 
+# cpp_sfml_want : the SFML major version the code is written for. SFML 3 changed the API
+# (events became std::optional), so an SFML 2 project can't build against SFML 3 or the other way round.
+cpp_sfml_want() {
+  local v
+  v="$(find_files . 2 'CMakeLists.txt' '*.cmake' | xargs -r grep -ohE 'find_package\(\s*SFML\s+[0-9]+' 2>/dev/null | grep -oE '[0-9]+$' | head -1)"
+  if [ -z "$v" ]; then
+    if cpp_scan 'std::optional|->is<sf::Event::|getIf<sf::Event::'; then v=3; else v=2; fi
+  fi
+  echo "$v"
+}
+
+# Builds the SFML release for a major version from source into /usr/local.
+cpp_install_sfml_from_source() {
+  local major="$1" tag log="$LN_TMP/sfml-build.log"
+  case "$major" in 3) tag=3.0.2 ;; *) tag=2.6.2 ;; esac
+  info "Building SFML $tag from source (this project needs SFML $major; Ubuntu ships a different major version)"
+  apt_install libx11-dev libxrandr-dev libxcursor-dev libxi-dev libudev-dev "libfreetype-dev|libfreetype6-dev" \
+    libopenal-dev libflac-dev libvorbis-dev libgl1-mesa-dev
+  rm -rf "$LN_TMP/sfml"
+  retry_network git -c advice.detachedHead=false clone -q --depth 1 --branch "$tag" https://github.com/SFML/SFML.git "$LN_TMP/sfml"
+  { cmake -S "$LN_TMP/sfml" -B "$LN_TMP/sfml/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+      -DSFML_BUILD_EXAMPLES=OFF -DSFML_BUILD_DOC=OFF -DSFML_BUILD_TEST_SUITE=OFF \
+    && cmake --build "$LN_TMP/sfml/build" -j "$(nproc)" \
+    && sudo_if_needed cmake --install "$LN_TMP/sfml/build" \
+    && sudo_if_needed ldconfig; } >"$log" 2>&1 \
+    || { tail -n 30 "$log" >&2; die "Building SFML $tag failed."; }
+  CPP_CMAKE_ARGS+=(-DSFML_DIR=/usr/local/lib/cmake/SFML)
+  # shellcheck disable=SC2054  # -Wl,-rpath,DIR is one linker flag; the commas belong to it
+  CPP_LDFLAGS=(-I/usr/local/include -L/usr/local/lib -Wl,-rpath,/usr/local/lib "${CPP_LDFLAGS[@]}")
+}
+
+cpp_install_sfml() {
+  local want have
+  want="$(cpp_sfml_want)"
+  have="$(apt-cache policy libsfml-dev 2>/dev/null | sed -nE 's/^\s*Candidate:\s*([0-9]+).*/\1/p')"
+  info "SFML: the code needs version $want, Ubuntu has ${have:-none}"
+  if [ "$want" = "$have" ]; then apt_install libsfml-dev; else cpp_install_sfml_from_source "$want"; fi
+}
+
 # raylib is not packaged for Ubuntu: build the latest release from source and install it.
 cpp_install_raylib() {
   if pkg-config --exists raylib 2>/dev/null || [ -f /usr/local/include/raylib.h ]; then return 0; fi
   apt_install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
   info "Building raylib from source (it isn't packaged for Ubuntu)"
   rm -rf "$LN_TMP/raylib"
-  retry_network git clone -q --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git "$LN_TMP/raylib"
+  retry_network git -c advice.detachedHead=false clone -q --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git "$LN_TMP/raylib"
   # raylib's own build is noisy (warnings from bundled libraries): keep it in a log, show it on failure.
   local log="$LN_TMP/raylib-build.log"
   { cmake -S "$LN_TMP/raylib" -B "$LN_TMP/raylib/build" -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release \
@@ -64,7 +104,7 @@ cpp_install_raylib() {
 stack_setup() {
   apt_install build-essential cmake pkg-config file libgl1-mesa-dev libglu1-mesa-dev libgl1-mesa-dri
   cpp_detect_libs
-  cpp_has sfml       && apt_install libsfml-dev
+  cpp_has sfml       && cpp_install_sfml
   cpp_has sdl2       && apt_install libsdl2-dev
   cpp_has sdl2-image && apt_install libsdl2-image-dev
   cpp_has sdl2-mixer && apt_install libsdl2-mixer-dev
@@ -102,7 +142,7 @@ cpp_build_cmake() {
   local bdir name
   bdir="$(cpp_build_dir cmake-build)"
   info "CMake project"
-  cmake -S . -B "$bdir" -DCMAKE_BUILD_TYPE=Release
+  cmake -S . -B "$bdir" -DCMAKE_BUILD_TYPE=Release "${CPP_CMAKE_ARGS[@]}"
   cmake --build "$bdir" -j "$(nproc)"
   # Prefer the first add_executable() target; fall back to the newest executable built.
   for name in $(grep -oE 'add_executable\(\s*[A-Za-z0-9_.+-]+' CMakeLists.txt | sed -E 's/add_executable\(\s*//'); do
