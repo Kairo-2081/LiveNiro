@@ -117,3 +117,71 @@ jobs:
             wait 4
           readme: ""
           commit: "false"
+
+  stacks:
+    name: ${{ matrix.fixture }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fixture: sfml-cmake
+            stack: cpp
+            actions: |
+              wait 0.5
+              hold Right 1.5
+              hold Up 1
+              hold Left 1.5
+          - fixture: sdl2-make
+            stack: cpp
+            actions: |
+              wait 0.5
+              hold Left 1.2
+              hold Right 2
+          - fixture: raylib-plain
+            stack: cpp
+            actions: |
+              wait 1
+              hold space 1.5
+          - fixture: qt-widgets
+            stack: cpp
+            actions: |
+              wait 0.5
+              click 250 86
+              type Ship LiveNiro v0.3
+              key Return
+              wait 1.5
+          - fixture: swing-plain
+            stack: java
+            actions: |
+              wait 0.8
+              click 60 365
+              wait 0.6
+              click 60 365
+              wait 0.6
+              click 60 365
+              wait 1
+          - fixture: tkinter-app
+            stack: python
+            actions: |
+              wait 0.5
+              type Atomic Habits
+              key Return
+              wait 1.5
+    steps:
+      - uses: actions/checkout@v4
+      - id: demo
+        uses: ./
+        with:
+          path: test/fixtures/${{ matrix.fixture }}
+          name: ${{ matrix.fixture }}
+          duration: "7"
+          actions: ${{ matrix.actions }}
+          readme: ""
+          commit: "false"
+      - name: Check the detected stack
+        shell: bash
+        run: |
+          test "${{ steps.demo.outputs.stack }}" = "${{ matrix.stack }}" \
+            || { echo "Expected stack ${{ matrix.stack }}, got '${{ steps.demo.outputs.stack }}'"; exit 1; }
+          test -s ".liveniro/${{ matrix.fixture }}.gif"
