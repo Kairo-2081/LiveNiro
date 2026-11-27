@@ -33,6 +33,7 @@ export LN_TMP
 # shellcheck source=lib/common.sh
 source "$LN_HOME/lib/common.sh"
 source "$LN_HOME/lib/detect.sh"
+source "$LN_HOME/lib/java.sh"
 source "$LN_HOME/lib/display.sh"
 source "$LN_HOME/lib/input.sh"
 source "$LN_HOME/lib/record.sh"
@@ -48,11 +49,11 @@ if [ "$stack" = "auto" ]; then
   stack="$(detect_stack "$PROJECT_DIR")"
   [ -n "$stack" ] || {
     if [ -n "$LN_RUN" ]; then stack="custom"; else
-      die "Could not tell what kind of project this is. Set 'stack:' or give a 'run:' command. Supported stacks: igraphics, javafx, pygame."
+      die "Could not tell what kind of project this is. Set 'stack:' or give a 'run:' command. Supported: iGraphics, JavaFX, Java Swing/AWT, Python GUIs (pygame, tkinter, Qt, pyglet, arcade), C/C++ (CMake, Make, qmake, or sources using SFML, SDL2, raylib, GLFW, GLUT, Qt)."
     fi
   }
 fi
-[ -f "$LN_HOME/stacks/$stack.sh" ] || die "Unknown stack '$stack'. Supported: auto, igraphics, javafx, pygame, custom."
+[ -f "$LN_HOME/stacks/$stack.sh" ] || die "Unknown stack '$stack'. Supported: auto, igraphics, javafx, java, pygame, python, cpp, custom."
 info "Stack: $stack"
 set_output stack "$stack"
 # shellcheck disable=SC1090
@@ -76,6 +77,7 @@ RUN_CMD="$LN_RUN"
 [ -n "$RUN_CMD" ] || RUN_CMD="$(stack_run_command)"
 [ -n "$RUN_CMD" ] || die "No run command. Set 'run:'."
 APP_LOG="$LN_TMP/app.log"
+: >"$APP_LOG"   # one log per run: earlier runs in the same job must not show up in this one's errors
 trap 'stop_app; stop_display' EXIT
 
 # launch_app : start the app in its own process group and wait for its window (sets WIN).
