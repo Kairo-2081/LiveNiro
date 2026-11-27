@@ -32,7 +32,7 @@ the top of your README. On every push. No server, no hosting bill.
 
 [At a glance](#at-a-glance) · [Showcase](#showcase) · [Found by LiveNiro](#found-by-liveniro) ·
 [Quick start](#quick-start) · [How it works](#how-it-works) · [Stacks](#supported-stacks) ·
-[Input scripts](#input-scripts) · [Options](#options) · [Recipes](#recipes) ·
+[Input scripts](#input-scripts) · [Tours](#tours-every-screen-every-level) · [Options](#options) · [Recipes](#recipes) ·
 [Engineering](#engineering) · [Status](#project-status-and-roadmap)
 
 </div>
@@ -54,6 +54,7 @@ every time you push, so the demo never goes stale.
 | **Zero-config stacks** | iGraphics (C++ / OpenGL / GLUT), JavaFX (Gradle or Maven) and pygame are detected and built automatically. |
 | **Anything else** | Any app that opens a window on Linux, with your own `setup`, `build` and `run` commands: Qt, SFML, raylib, SDL, Swing, Tkinter. |
 | **It plays, not just opens** | An input script clicks, types, holds keys and switches to dialogs while it records. |
+| **Whole-app tours** | Split one run into named scenes (menu, every page, every level): a GIF per scene in a README gallery, plus a full MP4 with chapters. |
 | **Outputs** | A palette-optimised GIF for the README, a sharp MP4, and a poster PNG, all in `.liveniro/`. |
 | **Stays current** | Runs on every push and rewrites only its own block in your README. |
 | **Fast after the first run** | Gradle, Maven and pip downloads are cached; rate-limited downloads are retried. |
@@ -264,6 +265,82 @@ The pointer only appears in the recording when the script uses the mouse.
 and read the pixel position of the button relative to the window's top-left
 corner. Any image viewer that shows the cursor position will do.
 
+## Tours: every screen, every level
+
+One GIF shows one moment. A **tour** shows the whole app: one run, split into
+named scenes. Each scene becomes its own short GIF in a README gallery, and the
+whole run becomes one MP4 with a title card and a chapter for every scene.
+
+<table>
+<tr>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/01-main-menu.gif" alt="Tour scene 1: main menu" width="100%"><br><b>1 · Main menu</b></td>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/02-leaderboard.gif" alt="Tour scene 2: leaderboard" width="100%"><br><b>2 · Leaderboard</b></td>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/03-help.gif" alt="Tour scene 3: help screen" width="100%"><br><b>3 · Help</b></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/04-level-1.gif" alt="Tour scene 4: level 1" width="100%"><br><b>4 · Level 1</b></td>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/05-level-2.gif" alt="Tour scene 5: level 2" width="100%"><br><b>5 · Level 2</b></td>
+<td width="33%" align="center"><img src="./docs/media/tour-bounce/06-level-3.gif" alt="Tour scene 6: level 3" width="100%"><br><b>6 · Level 3</b></td>
+</tr>
+</table>
+
+<p align="center"><sub>Bounce Classic, toured in one run: every menu screen and all three levels.</sub></p>
+
+Write `scenes:` instead of `actions:`. A line starting with `## ` begins a new
+scene and names it; everything under it is an ordinary input script:
+
+```yaml
+      - uses: Kairo-2081/LiveNiro@v0
+        with:
+          scenes: |
+            ## Main menu
+            wait 2.5
+
+            ## Leaderboard
+            click 1000 338
+            wait 3
+            key c                    # back to the menu
+
+            ## Level 1
+            click 1000 80            # New Game
+            hold Right 3
+            key Up
+
+            ## Level 2
+            sh printf '2 0 65 100 0' > saved.txt   # a save file that starts on level 2
+            restart                                # relaunch the game
+            click 1000 213                         # Load Game
+            hold Right 3
+```
+
+Two commands exist for tours:
+
+| Command | Does |
+| --- | --- |
+| `restart` | Close the app and start it again. For screens with no way back, or to start a scene fresh. |
+| `sh <command>` | Run a shell command in the project folder: write a save file, seed a database, reset state. |
+
+What you get, for `name: demo`:
+
+| File | What it is |
+| --- | --- |
+| `demo-01-main-menu.gif`, `demo-02-leaderboard.gif` … | One GIF per scene, named after the scene |
+| `demo-01-main-menu.png` … | A poster frame per scene |
+| `demo-tour.mp4` | The whole run with chapters and a title card per scene. Restarts are cut out, so it plays as one smooth walkthrough |
+
+The README block becomes a two-column gallery of the scenes, followed by a
+**▶ Watch the full walkthrough** link to the MP4.
+
+> [!TIP]
+> Keep scenes short (3–8 s each). Visitors scan a gallery; they don't watch a
+> two-minute GIF. Anything long belongs in the MP4, which costs far less space.
+
+**Reaching every level of a game.** LiveNiro presses the keys you give it; it
+can't win a level by itself. If your game saves its progress, write a save file
+with `sh` and load it after a `restart`, like the Level 2 scene above. Many
+games also accept a level number on the command line or an environment
+variable; `restart` re-runs your `run:` command, so either works.
+
 ## Options
 
 | Input | Default | What it does |
@@ -278,6 +355,8 @@ corner. Any image viewer that shows the cursor position will do.
 | `warmup` | `2` | Seconds between the window appearing and recording |
 | `duration` | `12` | Length of the clip in seconds |
 | `actions` | | [Input script](#input-scripts) |
+| `scenes` | | A [tour](#tours-every-screen-every-level); replaces `actions` and `duration` |
+| `scene-gif-width` | `560` | Width of each scene's GIF in a tour |
 | `screen` | `1600x900` | Virtual screen size |
 | `fps` | `15` | Recording frame rate (the GIF is capped at 12) |
 | `gif-width` | `800` | GIF width in pixels |
@@ -289,7 +368,7 @@ corner. Any image viewer that shows the cursor position will do.
 | `upload-artifact` | `true` | Also attach the files to the workflow run |
 | `cache` | `true` | Keep Gradle, Maven and pip downloads between runs |
 
-**Outputs:** `stack`, `gif`, `mp4`, `poster` (paths relative to the repo root).
+**Outputs:** `stack`, `gif`, `mp4`, `poster` (paths relative to the repo root); for tours also `scenes`, the number of scenes, with `gif` and `poster` pointing at the first scene and `mp4` at the full tour.
 
 ## Recipes
 
@@ -362,6 +441,8 @@ to preview a change's demo before merging.
 | **GIF with a per-clip palette**, plus an MP4 | GIFs play inline in every README; a palette built from the clip itself keeps them small and clean | GIFs are still larger than video, so keep clips short |
 | **Commit the files** instead of only uploading an artifact | A README image needs a stable path in the repo | The repo grows by roughly 0.3–2 MB each time the demo changes |
 | **Distro Python** for pygame | Runner images put a very new Python first, and pygame often has no wheel for it yet | Your project runs on the distro Python, not the newest one |
+| **Tours are one run, cut afterwards** | The app keeps its state from scene to scene, like a real user's session, and launches only once unless you `restart` | A scene can't be re-recorded alone; a broken step means re-running the tour |
+| **The full tour is the scene clips joined**, not the raw recording | Restarts and pauses between scenes are cut out, and chapters line up exactly with scenes | Anything between two scenes never appears in the video |
 | **Retry only network-looking failures** | 429s and timeouts from package servers are transient; compile errors are not | A real outage still fails, after about 80 s of retries |
 
 ### Project layout
@@ -374,9 +455,9 @@ src/
     common.sh           logging, Action outputs, apt installs, retry_network
     detect.sh           zero-config stack detection
     display.sh          Xvfb, window discovery, window geometry
-    input.sh            the input-script player
-    record.sh           ffmpeg recording and GIF / MP4 / poster encoding
-    readme.sh           the README marker block
+    input.sh            the input-script player and tour scenes
+    record.sh           ffmpeg recording; GIF / MP4 / poster and tour encoding
+    readme.sh           the README marker block and tour gallery
   stacks/
     igraphics.sh        each stack: stack_setup, stack_build, stack_run_command
     javafx.sh
@@ -395,7 +476,7 @@ fresh runner:
 | Job | Project | Script |
 | --- | --- | --- |
 | pygame | [`test/fixtures/pygame-bouncer`](./test/fixtures/pygame-bouncer) | Steer the paddle left and right |
-| iGraphics | [Bounce Classic](https://github.com/Kairo-2081/Bounce-Classic) | Menu → New Game → run and jump |
+| iGraphics | [Bounce Classic](https://github.com/Kairo-2081/Bounce-Classic) | A full tour: menu, leaderboard, help and all three levels, using `restart` and `sh` |
 | JavaFX | [BookVerse](https://github.com/Kairo-2081/LibraryManager) | Welcome → login dialog → dashboard |
 
 The log ends with the windows that were open when recording stopped, so a
@@ -430,15 +511,16 @@ Every input has an `LN_` environment variable: `LN_STACK`, `LN_RUN`,
 
 ## Project status and roadmap
 
-LiveNiro is at **v0.1.2** and records the showcase projects above on every push. Pin
-`@v0` to get fixes automatically, or a full tag such as `@v0.1.2` to stay on
+LiveNiro is at **v0.2.0** and records the showcase projects above on every push. Pin
+`@v0` to get fixes automatically, or a full tag such as `@v0.2.0` to stay on
 one version.
 
 - [x] **v0.1** · iGraphics, JavaFX, pygame and custom stacks; input scripts; README block; self-test on real projects
 - [x] **v0.1.1** · `focus` for dialogs and popups; end-of-run window log
 - [x] **v0.1.2** · dependency cache; retry on rate limits and timeouts
-- [ ] **v0.2** · zero-config SFML, Qt, Swing, raylib, CMake and Makefile projects
-- [ ] **v0.3** · "▶ Run live" badge backed by a self-hostable noVNC launcher
+- [x] **v0.2.0** · tours: named scenes, a GIF per scene, a gallery in the README, a full MP4 with chapters; `restart` and `sh`
+- [ ] **v0.3** · zero-config SFML, Qt, Swing, raylib, CMake and Makefile projects
+- [ ] **v0.4** · "▶ Run live" badge backed by a self-hostable noVNC launcher
 
 ### Contributing a stack
 

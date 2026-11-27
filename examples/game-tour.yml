@@ -1,0 +1,41 @@
+# A full tour of a game: every menu screen, then each level.
+# Each '## Title' starts a scene; the README gets a gallery of scene GIFs and a
+# link to the full walkthrough MP4 with chapters.
+name: LiveNiro tour
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: [".liveniro/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tour:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kairo-2081/LiveNiro@v0
+        with:
+          scenes: |
+            ## Main menu
+            wait 2.5
+
+            ## How to play
+            click 640 420            # "Help"
+            wait 3
+            key Escape               # back to the menu
+
+            ## Level 1
+            click 640 300            # "Play"
+            hold Right 3
+            key space                # jump
+            hold Right 2
+
+            ## Level 2
+            sh echo 2 > save.txt     # start the next run on level 2
+            restart
+            click 640 340            # "Continue"
+            hold Right 3

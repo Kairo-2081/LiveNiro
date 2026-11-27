@@ -16,6 +16,9 @@ REPO_ROOT="$(pwd)"
 : "${LN_WARMUP:=2}"
 : "${LN_DURATION:=12}"
 : "${LN_ACTIONS:=}"
+: "${LN_SCENES:=}"
+: "${LN_SCENE_GIF_WIDTH:=560}"
+: "${LN_MAX_TOUR:=600}"
 : "${LN_SCREEN:=1600x900}"
 : "${LN_FPS:=15}"
 : "${LN_GIF_WIDTH:=800}"
@@ -69,56 +72,100 @@ endgroup
 
 # 3. Start the virtual screen and the app
 start_display "$LN_SCREEN"
-run_cmd="$LN_RUN"
-[ -n "$run_cmd" ] || run_cmd="$(stack_run_command)"
-[ -n "$run_cmd" ] || die "No run command. Set 'run:'."
-info "Running: $run_cmd"
+RUN_CMD="$LN_RUN"
+[ -n "$RUN_CMD" ] || RUN_CMD="$(stack_run_command)"
+[ -n "$RUN_CMD" ] || die "No run command. Set 'run:'."
 APP_LOG="$LN_TMP/app.log"
-setsid bash -c "$run_cmd" >"$APP_LOG" 2>&1 &
-APP_PID=$!
 trap 'stop_app; stop_display' EXIT
 
-win="$(wait_for_window "$LN_WINDOW" "$LN_WAIT_TIMEOUT" "$APP_PID")" || {
+# launch_app : start the app in its own process group and wait for its window (sets WIN).
+launch_app() {
+  info "Running: $RUN_CMD"
+  setsid bash -c "$RUN_CMD" >>"$APP_LOG" 2>&1 &
+  APP_PID=$!
+  WIN="$(wait_for_window "$LN_WINDOW" "$LN_WAIT_TIMEOUT" "$APP_PID")" || return 1
+  info "Found window $WIN: \"$(window_name "$WIN")\""
+}
+
+# restart_app : used by the 'restart' script command. The recorded area stays where it is;
+# apps reopen at the same place, so the clip continues seamlessly.
+restart_app() {
+  stop_app
+  launch_app || return 1
+  sleep "$LN_WARMUP"
+  xdotool windowfocus "$WIN" 2>/dev/null || true
+}
+
+launch_app || {
   warn "Last lines of the app's output:"
   tail -n 40 "$APP_LOG" >&2 || true
   die "The app did not open a window within ${LN_WAIT_TIMEOUT}s."
 }
-info "Found window $win: \"$(window_name "$win")\""
 sleep "$LN_WARMUP"
 # Re-read the geometry after warm-up: many apps resize once they finish loading.
-read -r WX WY WW WH < <(window_box "$win")
-info "Recording ${WW}x${WH} at ${WX},${WY} for ${LN_DURATION}s"
+read -r WX WY WW WH < <(window_box "$WIN")
+export WIN WX WY
 
 # 4. Record, playing the input script at the same time
 RAW="$LN_TMP/raw.mp4"
+script_text="$LN_ACTIONS"
+[ -n "$LN_SCENES" ] && script_text="$LN_SCENES"
 # Show the pointer only when the script uses the mouse; otherwise park it off the window.
-if grep -qE '^\s*(click|move)\b' <<<"$LN_ACTIONS"; then LN_DRAW_MOUSE=1; else LN_DRAW_MOUSE=0; xdotool mousemove "$((SCREEN_W - 1))" "$((SCREEN_H - 1))" || true; fi
+if grep -qE '^\s*(click|move)\b' <<<"$script_text"; then LN_DRAW_MOUSE=1; else LN_DRAW_MOUSE=0; xdotool mousemove "$((SCREEN_W - 1))" "$((SCREEN_H - 1))" || true; fi
 export LN_DRAW_MOUSE
-start_recording "$RAW" "$WX" "$WY" "$WW" "$WH" "$LN_FPS" "$LN_DURATION"
-if [ -n "$LN_ACTIONS" ]; then
-  play_actions "$win" "$WX" "$WY" "$LN_ACTIONS" || warn "The input script stopped early."
+
+if [ -n "$LN_SCENES" ]; then
+  info "Recording a tour of ${WW}x${WH} at ${WX},${WY}"
+  start_recording "$RAW" "$WX" "$WY" "$WW" "$WH" "$LN_FPS" "$LN_MAX_TOUR"
+  t0="$(date +%s.%N)"
+  play_scenes "$LN_SCENES" "$t0"
+  stop_recording
+else
+  info "Recording ${WW}x${WH} at ${WX},${WY} for ${LN_DURATION}s"
+  start_recording "$RAW" "$WX" "$WY" "$WW" "$WH" "$LN_FPS" "$LN_DURATION"
+  if [ -n "$LN_ACTIONS" ]; then
+    play_actions "$LN_ACTIONS" || warn "The input script stopped early."
+  fi
+  wait_recording
 fi
-wait_recording
 # What was on screen at the end: useful to check that a scripted flow (login, menu) got where it should.
 info "Windows open at the end: $(list_windows | cut -f2 | sed 's/^$/(untitled)/' | paste -sd ',' | sed 's/,/, /g')"
 
+rel() { realpath --relative-to="$REPO_ROOT" "$1"; }
+
 # 5. Encode the outputs
 group "Encode"
-GIF="$OUT_DIR/$LN_NAME.gif"
-MP4="$OUT_DIR/$LN_NAME.mp4"
-POSTER="$OUT_DIR/$LN_NAME.png"
-encode_outputs "$RAW" "$GIF" "$MP4" "$POSTER" "$LN_GIF_WIDTH" "$LN_FPS"
+if [ -n "$LN_SCENES" ]; then
+  MP4="$OUT_DIR/$LN_NAME-tour.mp4"
+  encode_tour "$RAW" "$LN_TMP/scenes.tsv" "$OUT_DIR" "$LN_NAME" "$LN_SCENE_GIF_WIDTH" "$LN_FPS" "$MP4"
+  GIF="$OUT_DIR/$(head -n1 "$LN_TMP/tour.tsv" | cut -f3)"
+  POSTER="$OUT_DIR/$(head -n1 "$LN_TMP/tour.tsv" | cut -f4)"
+  set_output scenes "$(wc -l <"$LN_TMP/tour.tsv")"
+else
+  GIF="$OUT_DIR/$LN_NAME.gif"
+  MP4="$OUT_DIR/$LN_NAME.mp4"
+  POSTER="$OUT_DIR/$LN_NAME.png"
+  encode_outputs "$RAW" "$GIF" "$MP4" "$POSTER" "$LN_GIF_WIDTH" "$LN_FPS"
+fi
 endgroup
 
-rel() { realpath --relative-to="$REPO_ROOT" "$1"; }
 set_output gif "$(rel "$GIF")"
 set_output mp4 "$(rel "$MP4")"
 set_output poster "$(rel "$POSTER")"
 
-# 6. Point the README at the GIF
+# 6. Point the README at the GIF (or the tour gallery)
 if [ -n "$LN_README" ] && [ -f "$REPO_ROOT/$LN_README" ]; then
-  update_readme "$REPO_ROOT/$LN_README" "$GIF" "$MP4"
+  if [ -n "$LN_SCENES" ]; then
+    update_readme_tour "$REPO_ROOT/$LN_README" "$OUT_DIR" "$LN_TMP/tour.tsv" "$MP4"
+  else
+    update_readme "$REPO_ROOT/$LN_README" "$GIF" "$MP4"
+  fi
 fi
 
-info "Done: $(rel "$GIF") ($(du -h "$GIF" | cut -f1)), $(rel "$MP4") ($(du -h "$MP4" | cut -f1))"
-summary "### LiveNiro demo\n\nStack: \`$stack\`\n\nGIF: \`$(rel "$GIF")\`, MP4: \`$(rel "$MP4")\`"
+if [ -n "$LN_SCENES" ]; then
+  info "Done: $(wc -l <"$LN_TMP/tour.tsv") scenes ($(du -ch "$OUT_DIR/$LN_NAME"-[0-9][0-9]-*.gif | tail -1 | cut -f1) of GIFs), full tour $(rel "$MP4") ($(du -h "$MP4" | cut -f1))"
+  summary "### LiveNiro tour\n\nStack: \`$stack\`\n\n$(awk -F'\t' '{ printf "%s. %s (%ss)\\n", $1, $2, $5 }' "$LN_TMP/tour.tsv")\nFull tour: \`$(rel "$MP4")\`"
+else
+  info "Done: $(rel "$GIF") ($(du -h "$GIF" | cut -f1)), $(rel "$MP4") ($(du -h "$MP4" | cut -f1))"
+  summary "### LiveNiro demo\n\nStack: \`$stack\`\n\nGIF: \`$(rel "$GIF")\`, MP4: \`$(rel "$MP4")\`"
+fi
