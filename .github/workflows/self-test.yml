@@ -69,7 +69,7 @@ jobs:
           duration: "14"
           actions: |
             wait 1.5
-            click 519 409            # "Log In"
+            click 537 403            # "Log In" (inside the button in both the old and new welcome layout)
             wait 1.5
             focus Bookverse Login    # the login dialog
             click 468 227            # email field
