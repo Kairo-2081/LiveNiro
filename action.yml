@@ -39,6 +39,16 @@ inputs:
       Coordinates are relative to the app window. Commands:
       wait <sec> | click <x> <y> | move <x> <y> | key <name> | hold <key> <sec> | type <text>
     default: ""
+  scenes:
+    description: |
+      A tour: one recording split into named scenes. Start each scene with a line "## Title",
+      followed by input-script commands. Produces one GIF per scene, a gallery in the README and
+      a full MP4 with chapters. When set, 'actions' and 'duration' are ignored. Extra commands:
+      restart (relaunch the app) | sh <command> (run a shell command in the project folder)
+    default: ""
+  scene-gif-width:
+    description: Width in pixels of each scene's GIF in a tour.
+    default: "560"
   screen:
     description: Virtual screen size, WIDTHxHEIGHT.
     default: "1600x900"
@@ -83,6 +93,9 @@ outputs:
   poster:
     description: Path to the poster PNG.
     value: ${{ steps.run.outputs.poster }}
+  scenes:
+    description: Number of scenes recorded (tours only).
+    value: ${{ steps.run.outputs.scenes }}
 
 runs:
   using: composite
@@ -120,6 +133,8 @@ runs:
         LN_WARMUP: ${{ inputs.warmup }}
         LN_DURATION: ${{ inputs.duration }}
         LN_ACTIONS: ${{ inputs.actions }}
+        LN_SCENES: ${{ inputs.scenes }}
+        LN_SCENE_GIF_WIDTH: ${{ inputs.scene-gif-width }}
         LN_SCREEN: ${{ inputs.screen }}
         LN_FPS: ${{ inputs.fps }}
         LN_GIF_WIDTH: ${{ inputs.gif-width }}
