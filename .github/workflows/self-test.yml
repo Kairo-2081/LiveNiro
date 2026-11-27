@@ -25,7 +25,7 @@ jobs:
           commit: "false"
 
   igraphics:
-    name: iGraphics (Bounce Classic)
+    name: iGraphics tour (Bounce Classic)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,24 +33,60 @@ jobs:
         with:
           repository: Kairo-2081/Bounce-Classic
           path: projects/bounce-classic
-      - uses: ./
+      - id: tour
+        uses: ./
         with:
           path: projects/bounce-classic
           name: bounce-classic
-          duration: "14"
-          actions: |
-            wait 1.5
-            key Home
-            wait 0.5
+          scenes: |
+            ## Main menu
+            wait 2.5
+
+            ## Leaderboard
+            click 1000 338
+            wait 3
+            key c
+
+            ## Help
+            click 1000 465
+            wait 3
+
+            ## Level 1
+            restart
             click 1000 80
-            wait 1.5
+            move 1278 718
             hold Right 2.5
             key Up
             hold Right 2
             key Up
-            hold Right 3
+            hold Right 2
+
+            ## Level 2
+            sh printf '2 0 65 100 100' > saved.txt
+            restart
+            click 1000 213
+            move 1278 718
+            hold Right 2
+            key Up
+            hold Right 2.5
+
+            ## Level 3
+            sh printf '3 0 65 100 200' > saved.txt
+            restart
+            click 1000 213
+            move 1278 718
+            hold Right 2
+            key Up
+            hold Right 2.5
           readme: ""
           commit: "false"
+      - name: Check the tour
+        shell: bash
+        run: |
+          test "${{ steps.tour.outputs.scenes }}" = "6" || { echo "Expected 6 scenes, got '${{ steps.tour.outputs.scenes }}'"; exit 1; }
+          ls -la .liveniro
+          test -s .liveniro/bounce-classic-tour.mp4
+          test "$(ffprobe -v error -show_chapters -of csv=p=0 .liveniro/bounce-classic-tour.mp4 | wc -l)" = "6"
 
   javafx:
     name: JavaFX (LibraryManager)
