@@ -14,7 +14,7 @@ the top of your README. On every push. No server, no hosting bill.
 [![Version](https://img.shields.io/github/v/tag/Kairo-2081/LiveNiro?sort=semver&label=version&color=7c3aed)](https://github.com/Kairo-2081/LiveNiro/tags)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 ![Runs on](https://img.shields.io/badge/runs%20on-GitHub%20Actions-2088ff?logo=githubactions&logoColor=white)
-![Stacks](https://img.shields.io/badge/zero--config-iGraphics%20%7C%20JavaFX%20%7C%20pygame-db2777)
+![Stacks](https://img.shields.io/badge/zero--config-C%2FC%2B%2B%20%7C%20Java%20%7C%20Python%20%7C%20iGraphics-db2777)
 ![Written in](https://img.shields.io/badge/written%20in-Bash-4eaa25?logo=gnubash&logoColor=white)
 
 [Quick start](#quick-start) ·
@@ -51,8 +51,8 @@ every time you push, so the demo never goes stale.
 | | |
 | --- | --- |
 | **One file to add** | A short workflow file. No Dockerfile, no config file, no account anywhere. |
-| **Zero-config stacks** | iGraphics (C++ / OpenGL / GLUT), JavaFX (Gradle or Maven) and pygame are detected and built automatically. |
-| **Anything else** | Any app that opens a window on Linux, with your own `setup`, `build` and `run` commands: Qt, SFML, raylib, SDL, Swing, Tkinter. |
+| **Zero-config stacks** | C and C++ (CMake, Make, qmake or plain sources with SFML, SDL2, raylib, GLFW, GLUT or Qt), Java (JavaFX, Swing, AWT), Python (pygame, tkinter, Qt, pyglet, arcade) and iGraphics are detected and built automatically. |
+| **Anything else** | Any app that opens a window on Linux, with your own `setup`, `build` and `run` commands: Rust, Go, Zig, Electron, Godot exports. |
 | **It plays, not just opens** | An input script clicks, types, holds keys and switches to dialogs while it records. |
 | **Whole-app tours** | Split one run into named scenes (menu, every page, every level): a GIF per scene in a README gallery, plus a full MP4 with chapters. |
 | **Outputs** | A palette-optimised GIF for the README, a sharp MP4, and a poster PNG, all in `.liveniro/`. |
@@ -110,6 +110,26 @@ Stack LiveNiro doesn't recognise yet?
 it becomes the next detector.
 
 </td>
+</tr>
+</table>
+
+
+### More stacks, zero config
+
+Each of these is a small project in [`test/fixtures`](./test/fixtures), recorded by
+the self-test on every change with no `build:` or `run:` given: LiveNiro finds the
+build system, installs the libraries and starts the app by itself.
+
+<table>
+<tr>
+<td width="33%" align="center"><img src="./docs/media/stacks/sfml-cmake.gif" alt="SFML orbits demo recorded by LiveNiro" width="100%"><br><b>C++ · SFML · CMake</b><br><sub>arrow keys steer the ship</sub></td>
+<td width="33%" align="center"><img src="./docs/media/stacks/sdl2-make.gif" alt="SDL2 falling blocks demo recorded by LiveNiro" width="100%"><br><b>C · SDL2 · Makefile</b><br><sub>catch the blocks</sub></td>
+<td width="33%" align="center"><img src="./docs/media/stacks/raylib-plain.gif" alt="raylib comet demo recorded by LiveNiro" width="100%"><br><b>C · raylib · one file</b><br><sub>no build system at all</sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="./docs/media/stacks/qt-widgets.gif" alt="Qt task board recorded by LiveNiro, a task being typed and added" width="100%"><br><b>C++ · Qt 6 Widgets</b><br><sub>types a task, presses Enter</sub></td>
+<td width="33%" align="center"><img src="./docs/media/stacks/swing-plain.gif" alt="Java Swing equalizer recorded by LiveNiro, the Add bar button clicked three times" width="100%"><br><b>Java · Swing · plain sources</b><br><sub>clicks "Add bar" three times</sub></td>
+<td width="33%" align="center"><img src="./docs/media/stacks/tkinter-app.gif" alt="tkinter reading list recorded by LiveNiro, a book being added" width="100%"><br><b>Python · tkinter</b><br><sub>adds a book to the list</sub></td>
 </tr>
 </table>
 
@@ -211,7 +231,9 @@ afterwards, so Gradle daemons and child processes never outlive the run.
 | --- | --- | --- | --- |
 | **iGraphics**<br/><sub>C++ / OpenGL / GLUT</sub> | `iGraphics.h` in the repo | The project's own `build.sh` if it has a Linux branch, otherwise `g++` with GLUT, SDL2_mixer and FreeType | The built binary, from the project folder so relative asset paths work |
 | **JavaFX** | `openjfx` / `javafx` in `build.gradle(.kts)` or `pom.xml` | `./gradlew classes` or `mvn compile`, with the Java version read from your build file | `./gradlew run` or `mvn javafx:run` |
-| **pygame** | `pygame` in `requirements.txt` / `pyproject.toml`, or an `import pygame` | A fresh virtualenv on the distro Python, falling back to `pygame-ce` when pygame has no wheel | `main.py`, `game.py`, `app.py` … or the script that calls `set_mode` |
+| **java**<br/><sub>Swing / AWT</sub> | `.java` files that use `javax.swing` or `java.awt` | A Gradle `application`, `mvn compile`, or plain `javac` when there's no build tool | `./gradlew run`, `mvn exec:java`, or `java` on the class with `main()` (a Swing file and a class called `Main` win) |
+| **pygame** / **python**<br/><sub>pygame, tkinter, turtle, PyQt, PySide, pyglet, arcade, kivy, Dear PyGui</sub> | The library in `requirements.txt` / `pyproject.toml`, or an `import` of it | A fresh virtualenv on the distro Python; `requirements.txt` if there is one, plus anything the code imports that's missing; Tk and Qt system libraries when needed | `main.py`, `game.py`, `app.py` … or the script that opens a window or starts an event loop |
+| **cpp**<br/><sub>C / C++</sub> | `CMakeLists.txt`, a `.pro` file, a Makefile next to C/C++ sources, or sources that include SFML, SDL2, raylib, GLFW, GLUT or Qt | CMake, qmake or `make`; with no build system, `g++`/`gcc` on the sources with the detected libraries linked. Libraries come from Ubuntu, except raylib, which is built from source | The `add_executable()` target, or the newest executable the build produced; `make run` as a last resort |
 | **custom** | `stack: custom` | Your `setup` and `build` | Your `run` |
 
 Old iGraphics templates that include `<windows.h>` unconditionally can't build
@@ -390,18 +412,18 @@ Use a throwaway demo account, never real credentials: the workflow file is publi
 </details>
 
 <details>
-<summary><b>Any other stack</b> (Qt, SFML, raylib, Tkinter, Electron …)</summary>
+<summary><b>Any other stack</b> (Rust, Go, Zig, Electron, Godot exports …)</summary>
 
 ```yaml
       - uses: Kairo-2081/LiveNiro@v0
         with:
           stack: custom
-          setup: sudo apt-get install -y qt6-base-dev cmake
-          build: cmake -B build && cmake --build build -j
-          run: ./build/myapp
+          setup: sudo apt-get install -y libxkbcommon-x11-0 libgl1-mesa-dri
+          build: cargo build --release
+          run: ./target/release/myapp
 ```
 
-Full file: [`examples/custom-qt.yml`](./examples/custom-qt.yml).
+Full file: [`examples/custom-rust.yml`](./examples/custom-rust.yml).
 
 </details>
 
@@ -454,6 +476,7 @@ src/
   lib/
     common.sh           logging, Action outputs, apt installs, retry_network
     detect.sh           zero-config stack detection
+    java.sh             Java version detection and setup (JavaFX and Swing)
     display.sh          Xvfb, window discovery, window geometry
     input.sh            the input-script player and tour scenes
     record.sh           ffmpeg recording; GIF / MP4 / poster and tour encoding
@@ -461,7 +484,9 @@ src/
   stacks/
     igraphics.sh        each stack: stack_setup, stack_build, stack_run_command
     javafx.sh
-    pygame.sh
+    java.sh             Swing / AWT
+    python.sh           pygame, tkinter, Qt, pyglet, arcade … (pygame.sh is an alias)
+    cpp.sh              CMake, qmake, Make or plain C/C++ sources
     custom.sh
 test/fixtures/          small projects the self-test records
 examples/               copy-paste workflows
@@ -478,6 +503,7 @@ fresh runner:
 | pygame | [`test/fixtures/pygame-bouncer`](./test/fixtures/pygame-bouncer) | Steer the paddle left and right |
 | iGraphics | [Bounce Classic](https://github.com/Kairo-2081/Bounce-Classic) | A full tour: menu, leaderboard, help and all three levels, using `restart` and `sh` |
 | JavaFX | [BookVerse](https://github.com/Kairo-2081/LibraryManager) | Welcome → login dialog → dashboard |
+| C/C++, Java, Python | Six fixtures: SFML + CMake, SDL2 + Make, raylib, Qt 6, Swing, tkinter | Steer, click and type; the job also checks LiveNiro detected the right stack |
 
 The log ends with the windows that were open when recording stopped, so a
 scripted flow that went wrong (a dialog still open, an error alert) is visible
@@ -503,6 +529,7 @@ Every input has an `LN_` environment variable: `LN_STACK`, `LN_RUN`,
 - **Linux only.** The project has to build and run on Ubuntu. Windows-only code
   gets a clear error, not a silent failure.
 - **Software rendering.** No GPU on runners, so heavy 3D scenes record slowly.
+- **raylib is built from source** because Ubuntu doesn't package it, which adds about a minute to each run.
 - **No sound** in the recording.
 - **A recording, not the live app.** Visitors watch a GIF; they can't play it.
   A self-hostable "▶ Run live" launcher is on the roadmap.
@@ -511,15 +538,15 @@ Every input has an `LN_` environment variable: `LN_STACK`, `LN_RUN`,
 
 ## Project status and roadmap
 
-LiveNiro is at **v0.2.0** and records the showcase projects above on every push. Pin
-`@v0` to get fixes automatically, or a full tag such as `@v0.2.0` to stay on
+LiveNiro is at **v0.3.0** and records the showcase projects above on every push. Pin
+`@v0` to get fixes automatically, or a full tag such as `@v0.3.0` to stay on
 one version.
 
 - [x] **v0.1** · iGraphics, JavaFX, pygame and custom stacks; input scripts; README block; self-test on real projects
 - [x] **v0.1.1** · `focus` for dialogs and popups; end-of-run window log
 - [x] **v0.1.2** · dependency cache; retry on rate limits and timeouts
 - [x] **v0.2.0** · tours: named scenes, a GIF per scene, a gallery in the README, a full MP4 with chapters; `restart` and `sh`
-- [ ] **v0.3** · zero-config SFML, Qt, Swing, raylib, CMake and Makefile projects
+- [x] **v0.3.0** · zero-config C/C++ (CMake, Make, qmake, plain sources; SFML, SDL2, raylib, GLFW, GLUT, Qt), Java Swing/AWT, and Python GUIs beyond pygame
 - [ ] **v0.4** · "▶ Run live" badge backed by a self-hostable noVNC launcher
 
 ### Contributing a stack
@@ -527,7 +554,7 @@ one version.
 A stack is one file in [`src/stacks/`](./src/stacks) with three functions,
 `stack_setup`, `stack_build` and `stack_run_command`, plus a detection rule in
 [`detect.sh`](./src/lib/detect.sh) and a small fixture with a self-test job.
-[`pygame.sh`](./src/stacks/pygame.sh) is the shortest one to copy.
+[`custom.sh`](./src/stacks/custom.sh) shows the interface; [`java.sh`](./src/stacks/java.sh) is a short real one to copy.
 
 ## License
 

@@ -1,0 +1,25 @@
+# Any stack LiveNiro doesn't detect on its own: tell it how to install, build and run.
+# This one is a Rust GUI app (egui / iced / bevy); the same pattern works for Go, Zig,
+# Electron, Godot exports, Flutter Linux builds ...
+name: LiveNiro demo
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: [".liveniro/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kairo-2081/LiveNiro@v0
+        with:
+          stack: custom
+          setup: sudo apt-get install -y libxkbcommon-x11-0 libgl1-mesa-dri
+          build: cargo build --release
+          run: ./target/release/myapp
